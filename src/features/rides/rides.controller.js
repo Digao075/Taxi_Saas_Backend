@@ -1,27 +1,47 @@
-const { get } = require('./rides.routes');
-const rideService = require('./rides.service');
+const rideService = require('./ride.service');
 
-const create = async (request, response) => {
+const createRide = async (request, response) => {
   try {
-    const employeeId = request.employee.id;
-    const rideData = { ...request.body, employee_id: employeeId };
-    if (rideData.scheduled_for && isNaN(new Date(rideData.scheduled_for).getTime())) {
-      return response.status(400).json({ message: 'Formato de data inválido para scheduled_for.' });
+    const { origin_address, destination_address, scheduled_for } = request.body;
+    const employeeId = request.user.id; 
+
+    if (scheduled_for) {
+      const scheduleTime = new Date(scheduled_for);
+      const now = new Date();
+      const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+      if (scheduleTime < now) {
+        return response.status(400).json({ message: 'Não é possível agendar uma corrida para uma data passada.' });
+      }
+      if (scheduleTime < oneHourFromNow) {
+        return response.status(400).json({ message: 'A corrida deve ser agendada com pelo menos 1 hora de antecedência.' });
+      }
     }
+
+    const rideData = { 
+      origin_address, 
+      destination_address, 
+      scheduled_for, 
+      employee_id: employeeId 
+    };
+
     const newRide = await rideService.createRide(rideData);
     return response.status(201).json(newRide);
+
   } catch (error) {
-    console.error('Erro ao solicitar corrida:', error);
+    if (error.code === '23503') {
+      return response.status(404).json({ message: 'Colaborador com o ID fornecido não existe.' });
+    }
     return response.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
 const getAll = async (request, response) => {
   try {
-    const rides = await rideService.getAllRides();
+    const { status } = request.query;
+    const rides = await rideService.getAllRides(status);
     return response.status(200).json(rides);
   } catch (error) {
-    console.error('Erro ao buscar corridas:', error);
     return response.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -32,7 +52,6 @@ const getById = async (request, response) => {
     if (!ride) return response.status(404).json({ message: 'Corrida não encontrada.' });
     return response.status(200).json(ride);
   } catch (error) {
-    console.error('Erro ao buscar corrida:', error);
     return response.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -43,7 +62,6 @@ const update = async (request, response) => {
     if (!updatedRide) return response.status(404).json({ message: 'Corrida não encontrada.' });
     return response.status(200).json(updatedRide);
   } catch (error) {
-    console.error('Erro ao atualizar corrida:', error);
     return response.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
@@ -54,13 +72,12 @@ const remove = async (request, response) => {
     if (!deletedRide) return response.status(404).json({ message: 'Corrida não encontrada.' });
     return response.status(200).json({ message: 'Corrida excluída com sucesso.', ride: deletedRide });
   } catch (error) {
-    console.error('Erro ao excluir corrida:', error);
     return response.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
 
 module.exports = {
-  create,
+  create: createRide,
   getAll,
   getById,
   update,

@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const db = require("./config/database");
 const companyRoutes = require('./features/companies/companies.routes');
 const employeeRoutes = require('./features/employees/employees.routes');
 const driverRoutes = require('./features/drivers/drivers.routes');
@@ -8,14 +7,20 @@ const rideRoutes = require('./features/rides/rides.routes');
 const authRoutes = require('./features/auth/auth.routes');
 
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+  origin: '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+  allowedHeaders: 'Content-Type, Authorization',
+};
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
-
-app.get('/', (request, response) => {
-    return response.json({
-        message: 'TaxiAPI is running!'
-    });
+app.get('/api', (request, response) => {
+  response.json({ message: 'A API do SaaS de Táxi está rodando!' });
 });
 
 app.use('/api', authRoutes);

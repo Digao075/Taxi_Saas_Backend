@@ -1,21 +1,31 @@
 const db = require('../../config/database');
 
 const createRide = async (rideData) => {
-  const { employee_id, origin_address, destination_address, origin_lat, origin_lng, destination_lat, destination_lng, scheduled_for } = rideData;
-  const query = `
-    INSERT INTO rides (
-      employee_id, origin_address, destination_address, origin_lat, origin_lng, destination_lat, destination_lng
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+  const { origin_address, destination_address, employee_id, scheduled_for = null } = rideData;
+  
+  const insertQuery = `
+    INSERT INTO rides (origin_address, destination_address, employee_id, scheduled_for)
+    VALUES ($1, $2, $3, $4)
     RETURNING *;
   `;
-  const params = [employee_id, origin_address, destination_address, origin_lat, origin_lng, destination_lat, destination_lng, scheduled_for];
-  const { rows } = await db.query(query, params);
+  const values = [origin_address, destination_address, employee_id, scheduled_for];
+  
+  const { rows } = await db.query(insertQuery, values);
   return rows[0];
 };
 
-const getAllRides = async () => {
-  const query = 'SELECT * FROM rides ORDER BY requested_at DESC;';
-  const { rows } = await db.query(query);
+const getAllRides = async (status) => {
+  let query = 'SELECT * FROM rides';
+  const queryParams = [];
+
+  if (status) {
+    queryParams.push(status);
+    query += ' WHERE status = $1';
+  }
+
+  query += ' ORDER BY requested_at DESC;';
+  
+  const { rows } = await db.query(query, queryParams);
   return rows;
 };
 
@@ -25,15 +35,18 @@ const getRideById = async (id) => {
   return rows[0];
 };
 
+
 const updateRide = async (id, rideData) => {
   const { driver_id, status, price } = rideData;
   
   const findQuery = 'SELECT * FROM rides WHERE id = $1;';
-  const { rows: existingRide } = await db.query(findQuery, [id]);
-  if (existingRide.length === 0) return null;
+  const { rows: existingRideRows } = await db.query(findQuery, [id]);
+  const existingRide = existingRideRows[0];
+  
+  if (!existingRide) return null;
 
-  let completed_at = existingRide[0].completed_at;
-  if (status === 'completed' && existingRide[0].status !== 'completed') {
+  let completed_at = existingRide.completed_at;
+  if (status === 'completed' && existingRide.status !== 'completed') {
     completed_at = new Date();
   }
 
@@ -48,15 +61,17 @@ const updateRide = async (id, rideData) => {
     RETURNING *;
   `;
   const params = [
-    driver_id || existingRide[0].driver_id,
-    status || existingRide[0].status,
-    price || existingRide[0].price,
+    driver_id || existingRide.driver_id,
+    status || existingRide.status,
+    price || existingRide.price,
     completed_at,
     id
   ];
+  
   const { rows } = await db.query(query, params);
   return rows[0];
 };
+
 
 const deleteRideById = async (id) => {
   const query = 'DELETE FROM rides WHERE id = $1 RETURNING *;';
