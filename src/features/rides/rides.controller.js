@@ -38,8 +38,8 @@ const createRide = async (request, response) => {
 
 const getAll = async (request, response) => {
   try {
-    const { status } = request.query;
-    const rides = await rideService.getAllRides(status);
+    const filters = request.query;
+    const rides = await rideService.getAllRides(filters);
     return response.status(200).json(rides);
   } catch (error) {
     return response.status(500).json({ message: 'Erro interno do servidor.' });

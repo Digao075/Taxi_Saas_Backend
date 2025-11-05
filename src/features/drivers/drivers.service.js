@@ -40,7 +40,7 @@ const getDriverById = async (id) => {
 };
 
 const updateDriver = async (id, driverData) => {
-  const { full_name, email, phone_number, license_plate, vehicle_model, status, is_online, password } = driverData;
+  const { full_name, email, phone_number, license_plate, vehicle_model, status, is_online, password, commission_rate } = driverData;
 
   const existingDriver = (await db.query('SELECT * FROM drivers WHERE id = $1', [id])).rows[0];
   if (!existingDriver) return null;
@@ -54,9 +54,10 @@ const updateDriver = async (id, driverData) => {
     UPDATE drivers
     SET
       full_name = $1, email = $2, phone_number = $3, license_plate = $4,
-      vehicle_model = $5, status = $6, is_online = $7, password_hash = $8
-    WHERE id = $9
-    RETURNING id, full_name, email, phone_number, license_plate, vehicle_model, status, is_online, created_at;
+      vehicle_model = $5, status = $6, is_online = $7, password_hash = $8,
+      commission_rate = $9
+    WHERE id = $10
+    RETURNING *; 
   `;
 
   const params = [
@@ -68,6 +69,7 @@ const updateDriver = async (id, driverData) => {
     status || existingDriver.status,
     is_online !== undefined ? is_online : existingDriver.is_online,
     password_hash || existingDriver.password_hash,
+    commission_rate || existingDriver.commission_rate,
     id
   ];
 
